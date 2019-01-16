@@ -4,19 +4,22 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
+
+import javax.sql.DataSource;
 
 @Configuration
 public class DataSourceConfig {
 
     @Bean
-    public HikariDataSource firstDataSource(){
+    public HikariDataSource firstDataSource() {
         HikariConfig hikariConfig = getHikariConfig("");
         return new HikariDataSource(hikariConfig);
     }
 
 
     @Bean
-    public HikariDataSource secondDataSource(){
+    public HikariDataSource secondDataSource() {
         HikariConfig hikariConfig = getHikariConfig("");
         return new HikariDataSource(hikariConfig);
     }
@@ -30,5 +33,10 @@ public class DataSourceConfig {
         return hikariConfig;
     }
 
+    @Bean
+    public LazyConnectionDataSourceProxy lazyConnectionDataSourceProxy() {
+        LazyConnectionDataSourceProxy lazyConnectionDataSourceProxy = new LazyConnectionDataSourceProxy(firstDataSource());
+        return lazyConnectionDataSourceProxy;
+    }
 
 }
