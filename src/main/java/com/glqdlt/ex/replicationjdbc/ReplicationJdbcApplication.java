@@ -6,9 +6,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,19 +20,7 @@ import java.util.concurrent.Executors;
 public class ReplicationJdbcApplication implements CommandLineRunner {
 
     @Autowired
-    private UserRepo userRepo;
-
-    @Autowired
-    private DataSourceChanger dataSourceChanger;
-
-    @Autowired
-    @Qualifier("secondDataSource")
-    private DataSource secondSource;
-
-
-    @Autowired
-    @Qualifier("firstDataSource")
-    private DataSource firstSource;
+    private UserService userService;
 
 
     public static void main(String[] args) {
@@ -38,24 +29,21 @@ public class ReplicationJdbcApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        executorService.submit(() -> {
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        pool.submit(() -> {
             while (true) {
-                log.info(userRepo.findAll().toString());
+                log.info("master : {}", userService.findByMaster().toString());
                 Thread.sleep(1000);
             }
         });
-        executorService.submit(() -> {
+        pool.submit(() -> {
             while (true) {
-                Thread.sleep(2000);
-                int dd = LocalDateTime.now().getSecond();
-                if (dd % 3 == 0) {
-                    dataSourceChanger.changeDataSource(secondSource);
-                }else{
-                    dataSourceChanger.changeDataSource(firstSource);
-                }
+                log.info("slave : {}", userService.findBySlave().toString());
+                Thread.sleep(10);
             }
         });
+
     }
 }
 

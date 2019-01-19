@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 @EnableTransactionManagement
@@ -32,6 +34,7 @@ public class DataSourceConfig {
 
         return em;
     }
+
     Properties additionalProperties() {
         Properties properties = new Properties();
         properties.setProperty("hibernate.hbm2ddl.auto", "none");
@@ -44,7 +47,7 @@ public class DataSourceConfig {
 
     @Bean
     public PlatformTransactionManager transactionManager(
-            EntityManagerFactory emf){
+            EntityManagerFactory emf) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
         transactionManager.setEntityManagerFactory(emf);
 
@@ -52,8 +55,19 @@ public class DataSourceConfig {
     }
 
     @Bean
-    public LazyConnectionDataSourceProxy lazyConnectionDataSourceProxy(){
-        return new LazyConnectionDataSourceProxy(firstDataSource());
+    public DataSource routingDatasource(){
+        Map<Object, Object> sources = new HashMap<>();
+        sources.put(DataSourceType.MASTER, firstDataSource());
+        sources.put(DataSourceType.SLAVE_1, secondDataSource());
+        sources.put(DataSourceType.SLAVE_2, thirdDataSource());
+        RoutingDatasource routingDatasource = new RoutingDatasource();
+        routingDatasource.setTargetDataSources(sources);
+        return routingDatasource;
+    }
+
+    @Bean
+    public LazyConnectionDataSourceProxy lazyConnectionDataSourceProxy() {
+        return new LazyConnectionDataSourceProxy(routingDatasource());
     }
 
     @Bean
@@ -69,12 +83,19 @@ public class DataSourceConfig {
         return new HikariDataSource(hikariConfig);
     }
 
+
+    @Bean
+    public DataSource thirdDataSource() {
+        HikariConfig hikariConfig = hikariConfigGenerate("jdbc:mysql://127.0.0.1:3306/some3");
+        return new HikariDataSource(hikariConfig);
+    }
+
     private HikariConfig hikariConfigGenerate(String url) {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(url);
         hikariConfig.setDriverClassName("com.mysql.jdbc.Driver");
-        hikariConfig.setUsername("root");
-        hikariConfig.setPassword("1234");
+        hikariConfig.setUsername("test");
+        hikariConfig.setPassword("12345");
         return hikariConfig;
     }
 
